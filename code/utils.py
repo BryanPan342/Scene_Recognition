@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 import timeit, time
 from sklearn import neighbors, svm, cluster, preprocessing
+from random import randint
 
 
 def load_data():
@@ -119,16 +120,23 @@ def buildDict(train_images, dict_size, feature_type, clustering_type):
     features = []
     vocabulary = np.zeros(dict_size, dtype=int)
     if feature_type == "sift":
-        transformation = cv2.xfeatures2d.SIFT_create(n_features=25)
+        transformation = cv2.xfeatures2d.SIFT_create(nfeatures=25)
     elif feature_type == "surf":
-        transformation = cv2.xfeatures2d.SURF_create(n_features=25)
+        transformation = cv2.xfeatures2d.SURF_create()
     elif feature_type == "orb":
-        transformation = cv2.ORB_create(n_features=25)
+        transformation = cv2.ORB_create(nfeatures=25)
     for i in range(len(train_images)):
         kp, descriptors = transformation.detectAndCompute(train_images[i], None)
-        if(type(descriptors) == np.ndarray):
+        if feature_type=='surf':
+            temp = []
+            for i in range(25):
+                t = randint(0, len(descriptors)-1)
+                temp.append(descriptors[t])
+            descriptors = temp
+        if(type(descriptors) == np.ndarray or list):
             for des in descriptors:
                 features.append(des)
+    print(features)
     if clustering_type == "kmeans":
         model = cluster.KMeans(n_clusters=dict_size, n_jobs = -1)
         fit = model.fit_predict(features)
