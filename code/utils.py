@@ -16,11 +16,15 @@ def load_data():
     test_labels = []
     train_images = []
     test_images = []
+    j = 0
     for i, label in enumerate(train_classes):
         for filename in os.listdir(train_path + label + '/'):
+            if j == 168:
+                continue
             image = cv2.imread(train_path + label + '/' + filename, cv2.IMREAD_GRAYSCALE)
             train_images.append(image)
             train_labels.append(i)
+            j+=1
     for i, label in enumerate(test_classes):
         for filename in os.listdir(test_path + label + '/'):
             image = cv2.imread(test_path + label + '/' + filename, cv2.IMREAD_GRAYSCALE)
@@ -116,9 +120,9 @@ def buildDict(train_images, dict_size, feature_type, clustering_type):
 
     # NOTE: Should you run out of memory or have performance issues, feel free to limit the 
     # number of descriptors you store per image.
-    
     features = []
-    vocabulary = np.zeros(dict_size, dtype=int)
+    vocabulary = [None for i in range(dict_size)]
+    count = [0 for i in range(dict_size)]
     if feature_type == "sift":
         transformation = cv2.xfeatures2d.SIFT_create(nfeatures=25)
     elif feature_type == "surf":
@@ -132,20 +136,57 @@ def buildDict(train_images, dict_size, feature_type, clustering_type):
             for i in range(25):
                 t = randint(0, len(descriptors)-1)
                 temp.append(descriptors[t])
-            descriptors = temp
-        if(type(descriptors) == np.ndarray or list):
+            descriptors = np.asarray(temp)
+        if(type(descriptors) == np.ndarray):
             for des in descriptors:
                 features.append(des)
-    print(features)
+    features = np.asarray(features)
     if clustering_type == "kmeans":
         model = cluster.KMeans(n_clusters=dict_size, n_jobs = -1)
-        fit = model.fit_predict(features)
+        vocabulary = model.fit(features).cluster_centers_
     elif clustering_type == "hierarchical":
         model = cluster.AgglomerativeClustering(n_clusters=dict_size)
         fit = model.fit(features).labels_
-    for i in fit:
-        vocabulary[i]+=1
+        for i in range(len(fit)):
+            if count[fit[i]]!=0:
+                vocabulary[fit[i]] = np.add(vocabulary[fit[i]], features[i])
+            else:
+                vocabulary[fit[i]] = features[i].astype(float)
+            count[fit[i]] += 1
+        vocabulary = np.asarray(vocabulary)
+        for i in range(len(vocabulary)):
+            vocabulary[i] = np.divide(vocabulary[i], count[i])
     return vocabulary
+
+    #Cleaner Code if there were no memory problems
+    #
+    # features = []
+    # vocabulary = [None for i in range(dict_size)]
+    # count = [0 for i in range(dict_size)]
+    # if feature_type == "sift":
+    #     transformation = cv2.xfeatures2d.SIFT_create()
+    # elif feature_type == "surf":
+    #     transformation = cv2.xfeatures2d.SURF_create()
+    # elif feature_type == "orb":
+    #     transformation = cv2.ORB_create()
+    # for i in range(len(train_images)):
+    #     kp, descriptors = transformation.detectAndCompute(train_images[i], None)
+    #     for des in descriptors:
+    #         features.append(des)
+    # if clustering_type == "kmeans":
+    #     vocabulary = cluster.KMeans(n_clusters=dict_size, n_jobs = -1).fit(features).cluster_centers_
+    # elif clustering_type == "hierarchical":
+    #     fit = cluster.AgglomerativeClustering(n_clusters=dict_size).fit(features).labels_
+    #     for i in range(len(fit)):
+    #         if count[fit[i]]!=0:
+    #             vocabulary[fit[i]] = np.add(vocabulary[fit[i]], features[i])
+    #         else:
+    #             vocabulary[fit[i]] = features[i].astype(float)
+    #         count[fit[i]] += 1
+    #     vocabulary = np.asarray(vocabulary)
+    #     for i in range(len(vocabulary)):
+    #         vocabulary[i] = np.divide(vocabulary[i], count[i])
+    # return vocabulary
 
 def computeBow(image, vocabulary, feature_type):
     # extracts features from the image, and returns a BOW representation using a vocabulary

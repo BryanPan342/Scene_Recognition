@@ -52,14 +52,15 @@ if __name__ == "__main__":
     # e.g vocab_idx[i] will tell you which algorithms/neighbors were used to compute vocabulary i
     # This isn't used in the rest of the code so you can feel free to ignore it
 
-    for feature in ['surf']:
-        for algo in ['hierarchical']:
+    for feature in ['sift','surf','orb']:
+        for algo in ['kmeans','hierarchical']:
             for dict_size in [20,50]:
-                vocabulary = buildDict(train_images, dict_size, feature, algo)
                 filename = 'voc_' + feature + '_' + algo + '_' + str(dict_size) + '.npy'
-                np.save(SAVEPATH + filename, np.asarray(vocabulary))
-                vocabularies.append(vocabulary) # A list of vocabularies (which are 2D arrays)
-                vocab_idx.append(filename.split('.')[0]) # Save the map from index to vocabulary
+                if not os.path.exists(SAVEPATH + filename):
+                    vocabulary = buildDict(train_images, dict_size, feature, algo)
+                    np.save(SAVEPATH + filename, np.asarray(vocabulary))
+                    vocabularies.append(vocabulary) # A list of vocabularies (which are 2D arrays)
+                    vocab_idx.append(filename.split('.')[0]) # Save the map from index to vocabulary
                 
     # Compute the Bow representation for the training and testing sets
     test_rep = [] # To store a set of BOW representations for the test images (given a vocabulary)
