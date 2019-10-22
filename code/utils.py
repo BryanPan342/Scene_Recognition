@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 import timeit, time
 from sklearn import neighbors, svm, cluster, preprocessing
+from random import randint
 
 
 def load_data():
@@ -15,11 +16,15 @@ def load_data():
     test_labels = []
     train_images = []
     test_images = []
+    j = 0
     for i, label in enumerate(train_classes):
         for filename in os.listdir(train_path + label + '/'):
+            if j == 168:
+                continue
             image = cv2.imread(train_path + label + '/' + filename, cv2.IMREAD_GRAYSCALE)
             train_images.append(image)
             train_labels.append(i)
+            j+=1
     for i, label in enumerate(test_classes):
         for filename in os.listdir(test_path + label + '/'):
             image = cv2.imread(test_path + label + '/' + filename, cv2.IMREAD_GRAYSCALE)
@@ -115,29 +120,73 @@ def buildDict(train_images, dict_size, feature_type, clustering_type):
 
     # NOTE: Should you run out of memory or have performance issues, feel free to limit the 
     # number of descriptors you store per image.
-    
     features = []
-    vocabulary = np.zeros(dict_size, dtype=int)
+    vocabulary = [None for i in range(dict_size)]
+    count = [0 for i in range(dict_size)]
     if feature_type == "sift":
-        transformation = cv2.xfeatures2d.SIFT_create(n_features=25)
+        transformation = cv2.xfeatures2d.SIFT_create(nfeatures=25)
     elif feature_type == "surf":
-        transformation = cv2.xfeatures2d.SURF_create(n_features=25)
+        transformation = cv2.xfeatures2d.SURF_create()
     elif feature_type == "orb":
-        transformation = cv2.ORB_create(n_features=25)
+        transformation = cv2.ORB_create(nfeatures=25)
     for i in range(len(train_images)):
         kp, descriptors = transformation.detectAndCompute(train_images[i], None)
+        if feature_type=='surf':
+            temp = []
+            for i in range(25):
+                t = randint(0, len(descriptors)-1)
+                temp.append(descriptors[t])
+            descriptors = np.asarray(temp)
         if(type(descriptors) == np.ndarray):
             for des in descriptors:
                 features.append(des)
+    features = np.asarray(features)
     if clustering_type == "kmeans":
         model = cluster.KMeans(n_clusters=dict_size, n_jobs = -1)
-        fit = model.fit_predict(features)
+        vocabulary = model.fit(features).cluster_centers_
     elif clustering_type == "hierarchical":
         model = cluster.AgglomerativeClustering(n_clusters=dict_size)
         fit = model.fit(features).labels_
-    for i in fit:
-        vocabulary[i]+=1
+        for i in range(len(fit)):
+            if count[fit[i]]!=0:
+                vocabulary[fit[i]] = np.add(vocabulary[fit[i]], features[i])
+            else:
+                vocabulary[fit[i]] = features[i].astype(float)
+            count[fit[i]] += 1
+        vocabulary = np.asarray(vocabulary)
+        for i in range(len(vocabulary)):
+            vocabulary[i] = np.divide(vocabulary[i], count[i])
     return vocabulary
+
+    #Cleaner Code if there were no memory problems
+    #
+    # features = []
+    # vocabulary = [None for i in range(dict_size)]
+    # count = [0 for i in range(dict_size)]
+    # if feature_type == "sift":
+    #     transformation = cv2.xfeatures2d.SIFT_create()
+    # elif feature_type == "surf":
+    #     transformation = cv2.xfeatures2d.SURF_create()
+    # elif feature_type == "orb":
+    #     transformation = cv2.ORB_create()
+    # for i in range(len(train_images)):
+    #     kp, descriptors = transformation.detectAndCompute(train_images[i], None)
+    #     for des in descriptors:
+    #         features.append(des)
+    # if clustering_type == "kmeans":
+    #     vocabulary = cluster.KMeans(n_clusters=dict_size, n_jobs = -1).fit(features).cluster_centers_
+    # elif clustering_type == "hierarchical":
+    #     fit = cluster.AgglomerativeClustering(n_clusters=dict_size).fit(features).labels_
+    #     for i in range(len(fit)):
+    #         if count[fit[i]]!=0:
+    #             vocabulary[fit[i]] = np.add(vocabulary[fit[i]], features[i])
+    #         else:
+    #             vocabulary[fit[i]] = features[i].astype(float)
+    #         count[fit[i]] += 1
+    #     vocabulary = np.asarray(vocabulary)
+    #     for i in range(len(vocabulary)):
+    #         vocabulary[i] = np.divide(vocabulary[i], count[i])
+    # return vocabulary
 
 def computeBow(image, vocabulary, feature_type):
     # extracts features from the image, and returns a BOW representation using a vocabulary
@@ -146,9 +195,26 @@ def computeBow(image, vocabulary, feature_type):
     # vocabulary is an array of size dict_size x d
     # feature type is a string (from "sift", "surf", "orb") specifying the feature
     # used to create the vocabulary
-
+    if feature_type == "sift":
+        transformation = cv2.xfeatures2d.SIFT_create()
+    elif feature_type == "surf":
+        transformation = cv2.xfeatures2d.SURF_create()
+    elif feature_type == "orb":
+        transformation = cv2.ORB_create()
+    kp, descriptors = transformation.detectAndCompute(image, None)
+    if type(descriptors) != np.ndarray:
+        print("hi")
+        return Bow
+    Bow=[0 for i in vocabulary]
+    for i in descriptors:
+        max = [9223372036854775807, ]
+        for j in range(len(vocabulary)):
+            max = [max[0],max[1]]  if max[0] < abs(np.sum(np.subtract(vocabulary[j], i))) else [abs(np.sum(np.subtract(vocabulary[j], i))), j]
+        Bow[max[1]]+=1
+    for i in Bow:
+        i /= len(descriptors)
     # BOW is the new image representation, a normalized histogram
-    return Bow
+    return np.asarray(Bow)
 
 
 def tinyImages(train_features, test_features, train_labels, test_labels):
