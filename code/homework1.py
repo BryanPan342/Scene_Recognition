@@ -60,14 +60,16 @@ if __name__ == "__main__":
                     vocabulary = buildDict(train_images, dict_size, feature, algo)
                     np.save(SAVEPATH + filename, np.asarray(vocabulary))
                     vocabularies.append(vocabulary) # A list of vocabularies (which are 2D arrays)
-                    vocab_idx.append(filename.split('.')[0]) # Save the map from index to vocabulary
+                else:
+                    vocabularies.append(np.load(SAVEPATH + filename))
+                vocab_idx.append(filename.split('.')[0]) # Save the map from index to vocabulary
                 
     # Compute the Bow representation for the training and testing sets
     test_rep = [] # To store a set of BOW representations for the test images (given a vocabulary)
     train_rep = [] # To store a set of BOW representations for the train images (given a vocabulary)
     features = ['sift'] * 4 + ['surf'] * 4 + ['orb'] * 4 # Order in which features were used 
     # for vocabulary generation
-    
+
     # You need to write ComputeBow()
     for i, vocab in enumerate(vocabularies):
         for image in train_images: # Compute the BOW representation of the training set
@@ -79,7 +81,7 @@ if __name__ == "__main__":
             rep = computeBow(image, vocab, features[i])
             test_rep.append(rep)
         np.save(SAVEPATH + 'bow_test_' + str(i) + '.npy', np.asarray(test_rep)) # Save the representations for vocabulary i
-        train_rep = [] # reset the list to save the following vocabulary
+        test_rep = [] # reset the list to save the following vocabulary
         
     
     # Use BOW features to classify the images with a KNN classifier
@@ -88,9 +90,12 @@ if __name__ == "__main__":
     knn_runtimes = []
 
     # Your code below, eg:
-    # for i, vocab in enumerate(vocabularies):
-    # ... 
-    
+    for i, vocab in enumerate(vocabularies):
+        t1 = time.time()
+        predicted_labels = KNN_classifier(np.load(SAVEPATH + 'bow_train_' + str(i) + '.npy'), train_labels, np.load(SAVEPATH + 'bow_test_' + str(i) + '.npy'), 9)
+        knn_accuracies.append(reportAccuracy(predicted_labels, test_labels))
+        knn_runtimes.append(time.time()-t1)
+    print(knn_accuracies)
     np.save(SAVEPATH+'knn_accuracies.npy', np.asarray(knn_accuracies)) # Save the accuracies in the Results/ directory
     np.save(SAVEPATH+'knn_runtimes.npy', np.asarray(knn_runtimes)) # Save the runtimes in the Results/ directory
     
