@@ -93,7 +93,7 @@ if __name__ == "__main__":
     for i, vocab in enumerate(vocabularies):
         t1 = time.time()
         predicted_labels = KNN_classifier(np.load(SAVEPATH + 'bow_train_' + str(i) + '.npy'), train_labels, np.load(SAVEPATH + 'bow_test_' + str(i) + '.npy'), 9)
-        knn_accuracies.append(reportAccuracy(predicted_labels, test_labels))
+        knn_accuracies.append(reportAccuracy(test_labels, predicted_labels))
         knn_runtimes.append(time.time()-t1)
     print(knn_accuracies)
     np.save(SAVEPATH+'knn_accuracies.npy', np.asarray(knn_accuracies)) # Save the accuracies in the Results/ directory
