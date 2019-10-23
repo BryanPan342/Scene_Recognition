@@ -70,19 +70,18 @@ if __name__ == "__main__":
     features = ['sift'] * 4 + ['surf'] * 4 + ['orb'] * 4 # Order in which features were used 
     # for vocabulary generation
 
-    print("stop")
     # You need to write ComputeBow()
-    for i, vocab in enumerate(vocabularies):
-        for image in train_images: # Compute the BOW representation of the training set
-            rep = computeBow(image, vocab, features[i]) # Rep is a list of descriptors for a given image
-            train_rep.append(rep)
-            np.save(SAVEPATH + 'bow_train_' + str(i) + '.npy', np.asarray(train_rep)) # Save the representations for vocabulary i
-        train_rep = [] # reset the list to save the following vocabulary
-        for image in test_images: # Compute the BOW representation of the testing set
-            rep = computeBow(image, vocab, features[i])
-            test_rep.append(rep)
-            np.save(SAVEPATH + 'bow_test_' + str(i) + '.npy', np.asarray(test_rep)) # Save the representations for vocabulary i
-        test_rep = [] # reset the list to save the following vocabulary
+    # for i, vocab in enumerate(vocabularies):
+    #     for image in train_images: # Compute the BOW representation of the training set
+    #         rep = computeBow(image, vocab, features[i]) # Rep is a list of descriptors for a given image
+    #         train_rep.append(rep)
+    #     np.save(SAVEPATH + 'bow_train_' + str(i) + '.npy', np.asarray(train_rep)) # Save the representations for vocabulary i
+    #     train_rep = [] # reset the list to save the following vocabulary
+    #     for image in test_images: # Compute the BOW representation of the testing set
+    #         rep = computeBow(image, vocab, features[i])
+    #         test_rep.append(rep)
+    #     np.save(SAVEPATH + 'bow_test_' + str(i) + '.npy', np.asarray(test_rep)) # Save the representations for vocabulary i
+    #     test_rep = [] # reset the list to save the following vocabulary
         
     
     # Use BOW features to classify the images with a KNN classifier
@@ -105,7 +104,12 @@ if __name__ == "__main__":
     lin_runtimes = []
     
     # Your code below
-    #...
+    for i, vocab in enumerate(vocabularies):
+        t1 = time.time()
+        predicted_labels = SVM_classifier(np.load(SAVEPATH + 'bow_train_' + str(i) + '.npy'), train_labels, np.load(SAVEPATH + 'bow_test_' + str(i) + '.npy'), True, 10)
+        lin_accuracies.append(reportAccuracy(test_labels, predicted_labels))
+        lin_runtimes.append(time.time()-t1)
+    print(lin_accuracies)
 
     np.save(SAVEPATH+'lin_accuracies.npy', np.asarray(lin_accuracies)) # Save the accuracies in the Results/ directory
     np.save(SAVEPATH+'lin_runtimes.npy', np.asarray(lin_runtimes)) # Save the runtimes in the Results/ directory
@@ -115,7 +119,12 @@ if __name__ == "__main__":
     rbf_runtimes = []
     
     # Your code below
-    # ...
+    for i, vocab in enumerate(vocabularies):
+        t1 = time.time()
+        predicted_labels = SVM_classifier(np.load(SAVEPATH + 'bow_train_' + str(i) + '.npy'), train_labels, np.load(SAVEPATH + 'bow_test_' + str(i) + '.npy'), False, 3)
+        rbf_accuracies.append(reportAccuracy(test_labels, predicted_labels))
+        rbf_runtimes.append(time.time()-t1)
+    print(rbf_accuracies)
     
     np.save(SAVEPATH +'rbf_accuracies.npy', np.asarray(rbf_accuracies)) # Save the accuracies in the Results/ directory
     np.save(SAVEPATH +'rbf_runtimes.npy', np.asarray(rbf_runtimes)) # Save the runtimes in the Results/ directory

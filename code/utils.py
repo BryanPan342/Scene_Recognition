@@ -70,6 +70,32 @@ def SVM_classifier(train_features, train_labels, test_features, is_linear, svm_l
 
     # predicted_categories is an M x 1 array, where each entry is an integer
     # indicating the predicted category for each test feature.
+
+    predicted_categories = []
+    classifier_list = []
+    for i in range(15):
+        temp=np.copy(train_labels)
+        for j in range(len(train_labels)):
+            if train_labels[j] == i:
+                temp[j] = i
+            else:
+                temp[j] = 15
+        if is_linear:
+            classifier = svm.LinearSVC(C=svm_lambda).fit(train_features, temp)
+        else:
+            classifier = svm.SVC(kernel='rbf', C=svm_lambda, gamma='scale').fit(train_features, temp)
+        classifier_list.append(classifier)
+    for i in test_features:
+        predicted_categories.append(np.asarray([c.decision_function([i])[0] for c in classifier_list]).argmin())
+    # classifier = svm.LinearSVC()
+    # predicted_categories = classifier.fit(train_features, train_labels).predict(test_features)
+    # if is_linear:
+    #     classifier = svm.LinearSVC()
+    # else:
+    #     classifier = svm.SVC(kernel='rbf', gamma=svm_lambda)
+    # fit = classifier.fit(train_features, train_labels)
+    # predicted_categories = fit.predict(test_features)
+
     return predicted_categories
 
 
@@ -94,7 +120,6 @@ def reportAccuracy(true_labels, predicted_labels):
     for i in range(len(true_labels)):
         if true_labels[i] == predicted_labels[i]:
             accuracy+=1
-    print(accuracy)
     return accuracy * 100. / len(true_labels)
 
 
@@ -146,36 +171,6 @@ def buildDict(train_images, dict_size, feature_type, clustering_type):
             vocabulary[i] = np.divide(vocabulary[i], count[i])
     return vocabulary
 
-    #Cleaner Code if there were no memory problems
-    #
-    # features = []
-    # vocabulary = [None for i in range(dict_size)]
-    # count = [0 for i in range(dict_size)]
-    # if feature_type == "sift":
-    #     transformation = cv2.xfeatures2d.SIFT_create()
-    # elif feature_type == "surf":
-    #     transformation = cv2.xfeatures2d.SURF_create()
-    # elif feature_type == "orb":
-    #     transformation = cv2.ORB_create()
-    # for i in range(len(train_images)):
-    #     kp, descriptors = transformation.detectAndCompute(train_images[i], None)
-    #     for des in descriptors:
-    #         features.append(des)
-    # if clustering_type == "kmeans":
-    #     vocabulary = cluster.KMeans(n_clusters=dict_size, n_jobs = -1).fit(features).cluster_centers_
-    # elif clustering_type == "hierarchical":
-    #     fit = cluster.AgglomerativeClustering(n_clusters=dict_size).fit(features).labels_
-    #     for i in range(len(fit)):
-    #         if count[fit[i]]!=0:
-    #             vocabulary[fit[i]] = np.add(vocabulary[fit[i]], features[i])
-    #         else:
-    #             vocabulary[fit[i]] = features[i].astype(float)
-    #         count[fit[i]] += 1
-    #     vocabulary = np.asarray(vocabulary)
-    #     for i in range(len(vocabulary)):
-    #         vocabulary[i] = np.divide(vocabulary[i], count[i])
-    # return vocabulary
-
 def computeBow(image, vocabulary, feature_type):
     # extracts features from the image, and returns a BOW representation using a vocabulary
 
@@ -193,16 +188,9 @@ def computeBow(image, vocabulary, feature_type):
     Bow=[0 for i in vocabulary]
     for i in descriptors:
         Bow[np.array(np.linalg.norm(i-vocabulary, axis=1)).argmin()]+=1
-    #     max = [9223372036854775807, ]
-    #     for j in range(len(vocabulary)):
-    #         max = [max[0],max[1]]  if max[0] < abs(np.sum(np.subtract(vocabulary[j], i))) else [abs(np.sum(np.subtract(vocabulary[j], i))), j]
-    #     Bow[max[1]]+=1
-    # for i in Bow:
-    #     i /= len(descriptors)
-    # BOW is the new image representation, a normalized histogram
 
+    # BOW is the new image representation, a normalized histogram
     return np.asarray(Bow) / float(len(descriptors))
-    # return np.asarray(Bow) / len(descriptors)
 
 
 def tinyImages(train_features, test_features, train_labels, test_labels):
@@ -238,7 +226,6 @@ def tinyImages(train_features, test_features, train_labels, test_labels):
         for k in range(len(arr_n)):
             predicted_labels = KNN_classifier(resized_train, train_labels, resized_test, arr_n[k])
             classResult.append(reportAccuracy(test_labels, predicted_labels))
-            classResult.append(time.time()-t1)            
-    print(classResult)
+            classResult.append(time.time()-t1) 
     return classResult
     
