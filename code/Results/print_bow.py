@@ -1,3 +1,7 @@
 import numpy as np
-bow_test_1 = np.load('bow_test_1.npy')
-print(bow_test_1[0])
+for i in range(12):
+	for j in ['train', 'test']:
+		bow_test = np.load('bow_' + j + '_' + str(i) + '.npy')
+		print()
+		print('bow_' + j + '_' + str(i))
+		print(bow_test)
